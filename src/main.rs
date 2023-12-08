@@ -1,8 +1,11 @@
+mod image_downloader;
+
 use anyhow::{Context, Result};
 use std::{
     fs::{copy, create_dir_all, File},
     os::unix::fs::chroot,
 };
+use tempfile::TempDir;
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -13,9 +16,11 @@ struct Command {
 }
 
 // Usage: your_docker.sh run <image> <command> <arg1> <arg2> ...
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let command = parse_arguments();
-    setup_container(&command)?;
+    let tmp_dir = TempDir::new()?;
+    setup_container(&command, &tmp_dir).await;
 
     let output = execute_command(&command.command, &command.args)?;
 
@@ -39,14 +44,13 @@ fn execute_command(
     Ok(output)
 }
 
-fn setup_container(command: &Command) -> Result<()> {
-    setup_chroot(command)?;
+async fn setup_container(command: &Command, tmp_dir: &TempDir) {
+    image_downloader::download_image(&command.image, tmp_dir).await;
+    let _ = setup_chroot(command, tmp_dir);
     setup_pid_jail();
-    Ok(())
 }
 
-fn setup_chroot(command: &Command) -> Result<()> {
-    let tmp_dir = tempfile::tempdir()?;
+fn setup_chroot(command: &Command, tmp_dir: &TempDir) -> Result<()> {
     let final_path = tmp_dir
         .path()
         .join(command.command.strip_prefix('/').unwrap());
