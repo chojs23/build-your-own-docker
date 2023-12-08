@@ -19,9 +19,7 @@ fn main() -> Result<()> {
             )
         })?;
 
-    if !output.status.success() {
-        std::process::exit(1);
-    }
+    let child_status_code = output.status.code().unwrap_or(1);
 
-    Ok(())
+    std::process::exit(child_status_code);
 }
