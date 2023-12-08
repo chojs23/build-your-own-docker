@@ -61,7 +61,7 @@ fn setup_chroot(command: &Command) -> Result<()> {
 
 fn setup_pid_jail() {
     // Namespaces are not a thing outside Linux
-    #[cfg(target_os = "osx")]
+    #[cfg(target_os = "linux")]
     unsafe {
         libc::unshare(libc::CLONE_NEWPID);
     };
