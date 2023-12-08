@@ -40,6 +40,12 @@ fn execute_command(
 }
 
 fn setup_container(command: &Command) -> Result<()> {
+    setup_chroot(command)?;
+    setup_pid_jail();
+    Ok(())
+}
+
+fn setup_chroot(command: &Command) -> Result<()> {
     let tmp_dir = tempfile::tempdir()?;
     let final_path = tmp_dir
         .path()
@@ -51,6 +57,14 @@ fn setup_container(command: &Command) -> Result<()> {
     File::create(dev_null).expect("Failed to create /dev/null");
     chroot(tmp_dir.path()).expect("Failed to chroot");
     Ok(())
+}
+
+fn setup_pid_jail() {
+    // Namespaces are not a thing outside Linux
+    #[cfg(target_os = "osx")]
+    unsafe {
+        libc::unshare(libc::CLONE_NEWPID);
+    };
 }
 
 fn parse_arguments() -> Command {
